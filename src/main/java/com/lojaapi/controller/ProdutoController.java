@@ -4,6 +4,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
+
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,7 +31,16 @@ public class ProdutoController {
 	
 	@GetMapping("/produtos")
 	public ResponseEntity<List<ProdutoModel>> getAllProdutos(){
-		return new ResponseEntity<List<ProdutoModel>>(repository.findAll(), HttpStatus.OK);
+		
+		List<ProdutoModel> produtLista = repository.findAll();
+		if(!produtLista.isEmpty()) {
+			for(ProdutoModel p: produtLista) {
+				UUID id = p.getId();
+				p.add(linkTo(methodOn(ProdutoController.class).getOneProduto(id)).withSelfRel());
+			}
+		}
+		
+		return new ResponseEntity<List<ProdutoModel>>(produtLista, HttpStatus.OK);
 	}
 	
 	@GetMapping("/produtos/{id}")
@@ -36,6 +49,8 @@ public class ProdutoController {
 		if(produtoOp.isEmpty()) {
 			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 		}
+		produtoOp.get().add(linkTo(methodOn(ProdutoController.class)
+				.getAllProdutos()).withRel("Lista de Produtos"));
 		return new ResponseEntity<ProdutoModel>(produtoOp.get(), HttpStatus.OK);
 	}
 	
@@ -44,8 +59,8 @@ public class ProdutoController {
 		return new ResponseEntity<ProdutoModel>(repository.save(produto), HttpStatus.CREATED);
 	}
 	
-	@DeleteMapping("/produto/{id}")
-	public ResponseEntity<ProdutoModel> deleteProduto (@PathVariable(value = "id") UUID id){
+	@DeleteMapping("/produtos/{id}")
+	public ResponseEntity<ProdutoModel> deleteProduto (@PathVariable(value="id") UUID id){
 		Optional<ProdutoModel> produtoOp = repository.findById(id);
 		if(produtoOp.isEmpty()) {
 			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
